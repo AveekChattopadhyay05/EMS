@@ -18,6 +18,7 @@ import EditEmployee from './components/employee/EditEmployee';
 import LeadsList from './components/leads/LeadsList';
 import AddLead from './components/leads/AddLead';
 import EditLead from './components/leads/EditLead';
+import DebugTree from './components/leads/DebugTree';
 
 const router = createBrowserRouter([
   {
@@ -70,7 +71,7 @@ const router = createBrowserRouter([
     },
     {
       path:'leads',
-      element:<LeadsList/>
+      element:<DebugTree/>
     },
     {
       path:'add-lead',

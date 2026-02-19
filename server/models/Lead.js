@@ -63,12 +63,94 @@ export class Lead {
 
   // ✅ List all leads
   listLeads(callback) {
-    const sql = "SELECT name, email, role FROM users";
-    this.db.query(sql, (err, result) => {
-      if (err) return callback(err);
-      callback(null, result);
+  console.log("🔍 Starting recursive listLeads");
+
+  const getLeadsSql = 'SELECT name, email, role FROM users WHERE role != "admin"';
+
+  // Helper function to recursively fetch employees
+  const getEmployeesRecursively = (leadName, done) => {
+    const getEmployeesSql = 'SELECT id, name, email, Dept, DOB FROM employees WHERE Dept_Lead = ?';
+    this.db.query(getEmployeesSql, [leadName], async (err, employees) => {
+      if (err) {
+        console.error(`❌ Error fetching employees for lead ${leadName}:`, err);
+        return done([]);
+      }
+
+      if (employees.length === 0) {
+        return done([]);
+      }
+
+      let completed = 0;
+      const result = [];
+
+      employees.forEach((emp, idx) => {
+        // Check if this employee is also a lead (exists in users)
+        const checkLeadSql = 'SELECT name, email, role FROM users WHERE name = ?';
+        this.db.query(checkLeadSql, [emp.name], (leadErr, leadRows) => {
+          if (leadErr) {
+            console.error(`❌ Error checking if ${emp.name} is a lead:`, leadErr);
+          }
+
+          if (leadRows && leadRows.length > 0) {
+            // Recursive call if the employee is also a lead
+            getEmployeesRecursively(emp.name, (nestedEmployees) => {
+              result[idx] = {
+                ...emp,
+                DOB: emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null,
+                employees: nestedEmployees,
+                employeeCount: nestedEmployees.length
+              };
+              completed++;
+              if (completed === employees.length) done(result);
+            });
+          } else {
+            // Normal employee (no subordinates)
+            result[idx] = {
+              ...emp,
+              DOB: emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null,
+              employees: [],
+              employeeCount: 0
+            };
+            completed++;
+            if (completed === employees.length) done(result);
+          }
+        });
+      });
     });
-  }
+  };
+
+  // Main query to get all top-level leads
+  this.db.query(getLeadsSql, (err, leads) => {
+    if (err) {
+      console.error("❌ Error fetching leads:", err);
+      return callback(err);
+    }
+
+    console.log("✅ Found", leads.length, "leads");
+
+    if (leads.length === 0) return callback(null, []);
+
+    const leadsWithEmployees = [];
+    let doneCount = 0;
+
+    leads.forEach((lead, idx) => {
+      getEmployeesRecursively(lead.name, (employees) => {
+        leadsWithEmployees[idx] = {
+          ...lead,
+          employees,
+          employeeCount: employees.length
+        };
+
+        doneCount++;
+        if (doneCount === leads.length) {
+          console.log("🎉 All leads processed");
+          callback(null, leadsWithEmployees);
+        }
+      });
+    });
+  });
+}
+
 
   // ✅ Reset password
   resetPassword(id, newPassword, callback) {
@@ -185,13 +267,22 @@ export class Lead {
     });
   }
   listLeadsWithEmployees(callback) {
+  console.log("🔍 Starting listLeadsWithEmployees");
+  
   // First get all leads (exclude admin)
-  const getLeadsSql = 'SELECT name, email, role FROM users WHERE role != "admin"';
+  const getLeadsSql = 'SELECT id, name, email, role FROM users WHERE role != "admin"';
   
   this.db.query(getLeadsSql, (err, leads) => {
-    if (err) return callback(err);
+    if (err) {
+      console.error("❌ Error fetching leads:", err);
+      return callback(err);
+    }
+
+    console.log("✅ Fetched leads:", leads);
+    console.log("📊 Number of leads found:", leads.length);
 
     if (leads.length === 0) {
+      console.log("📭 No leads found, returning empty array");
       return callback(null, []);
     }
 
@@ -199,13 +290,19 @@ export class Lead {
     const leadsWithEmployees = [];
     let completedRequests = 0;
 
+    console.log("🔄 Starting to fetch employees for each lead...");
+
     leads.forEach((lead, index) => {
+      console.log(`🔍 Fetching employees for lead: ${lead.name} (index: ${index})`);
+      
       const getEmployeesSql = 'SELECT id, name, email, Dept, DOB FROM employees WHERE Dept_Lead = ?';
       
       this.db.query(getEmployeesSql, [lead.name], (empErr, employees) => {
         if (empErr) {
-          console.error("Error fetching employees for lead:", lead.name, empErr);
+          console.error(`❌ Error fetching employees for lead ${lead.name}:`, empErr);
           employees = []; // Continue with empty array if error
+        } else {
+          console.log(`✅ Found ${employees.length} employees for lead ${lead.name}:`, employees);
         }
 
         // Format employee DOB
@@ -221,11 +318,16 @@ export class Lead {
         };
 
         completedRequests++;
+        console.log(`📈 Completed ${completedRequests}/${leads.length} lead queries`);
 
         // When all requests are completed, send response
         if (completedRequests === leads.length) {
+          console.log("🎉 All lead queries completed, preparing final response");
+          
           // Sort by lead name for consistent ordering
           leadsWithEmployees.sort((a, b) => a.name.localeCompare(b.name));
+          
+          console.log("📤 Final response data:", leadsWithEmployees);
           callback(null, leadsWithEmployees);
         }
       });

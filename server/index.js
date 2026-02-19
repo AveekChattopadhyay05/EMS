@@ -194,7 +194,7 @@ app.put("/api/lead/update/:email", (req, res) => {
   });
 });
 // Add this new endpoint to your index.js file
-app.get("/api/lead/list-with-employees", (req, res) => {
+app.get("/api/lead/list-emp", (req, res) => {
   leadModel.listLeadsWithEmployees((err, result) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(result);
