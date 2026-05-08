@@ -3,6 +3,7 @@ import AdminSidebar from "../components/dashboard/AdminSidebar"
 import Navbar from "../components/dashboard/Navbar"
 import AdminSummary from "../components/AdminSummary"
 import { Outlet } from "react-router-dom"
+import ChatWidget from "../AI-Service/ChatWidget"
 export default function AdminDashboard(){
     const {user}=useAuth()
     return(
@@ -11,6 +12,7 @@ export default function AdminDashboard(){
         <AdminSidebar/>
         <div className="flex-1 ml-64 bg-gray-100 h-screen">
             <Navbar/>
+            <ChatWidget/>
            <Outlet/>
         </div>
         </div>

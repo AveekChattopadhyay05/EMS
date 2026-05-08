@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import LeadButtons from "../../utils/LeadsHelp";
+import NodeTree from "../leads/NodeTree"
 
 
 // Tree Node Model
@@ -115,7 +116,7 @@ const TreeNodeComponent = ({ node, level = 0, onNodeAction, onUpdate }) => {
             <div className="px-8">
               <div className="border-l-2 border-blue-200 ml-4">
                 {node.children.map((child) => (
-                  <TreeNodeComponent
+                  <NodeTree
                     key={child.id}
                     node={child}
                     level={level + 1}
@@ -197,7 +198,7 @@ const buildNode = (item) => {
   const node = new TreeNode(
     item.id,
     item.name,
-    item.role ? "lead" : "employee",
+    item.role === "lead" ? "lead" : "employee",
     item
   );
 

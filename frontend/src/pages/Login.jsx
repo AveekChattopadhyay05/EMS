@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from 'axios';
 import { useAuth } from "../context/AuthContext"; 
 import { useNavigate } from "react-router-dom";
-
+import { Link } from "react-router-dom";
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,8 +21,12 @@ export default function Login() {
         login(result.data.user);
         if (result.data.user.role === "admin") {
           navigate('/admin-dashboard');
-        } else {
+        } 
+        if(result.data.user.role==="employee") {
           navigate('/employee-dashboard');
+        }
+        if(result.data.user.role==='lead'){
+          navigate('/lead-dashboard')
         }
       })
       .catch(err => {
@@ -75,7 +79,7 @@ export default function Login() {
           <input type="checkbox" className="form-checkbox" />
           <span className="ml-2 text-gray-700">Remember me</span>
         </label>
-        <a href="#" className="text-teal-600 hover:underline text-sm">Forgot password?</a>
+        <a href="/forgot-password"  className="text-teal-600 hover:underline text-sm">Forgot password?</a>
       </div>
       <div className="mb-2">
         <button
@@ -85,6 +89,15 @@ export default function Login() {
         >
           Login
         </button>
+        <p className="text-sm mt-3 text-gray-600">
+           Don’t have a password?{" "}
+           <Link
+           to="/setup-account"
+         className="text-blue-600 hover:underline"
+       >
+    Set up account
+  </Link>
+</p>
       </div>
     </form>
   </div>

@@ -1,16 +1,16 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "../components/dashboard/Navbar";
-import EmployeeSidebar from "../components/dashboard/EmployeeSidebar";
+import LeadSidebar from "../components/dashboard/LeadSidebar";
 import { useAuth } from "../context/AuthContext";
 import { FaUserCircle } from "react-icons/fa";
 
-export default function EmployeeDashboard() {
+export default function LeadDashbooard() {
   const { user } = useAuth();
 
   return (
     <div className="flex">
-      <EmployeeSidebar />
+      <LeadSidebar />
 
       <div className="flex-1 ml-64 bg-gray-100 min-h-screen">
         <Navbar />
@@ -30,7 +30,7 @@ export default function EmployeeDashboard() {
               <p className="text-gray-600">{user.email}</p>
 
               <p className="text-sm text-gray-400 mt-1">
-                Employee Dashboard
+                Lead Dashboard
               </p>
             </div>
 

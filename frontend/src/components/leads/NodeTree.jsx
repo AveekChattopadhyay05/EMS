@@ -1,11 +1,28 @@
 import React, { useState } from "react";
 import LeadButtons from "../../utils/LeadsHelp";
-
+import { useNavigate } from "react-router-dom";
 export default function NodeTree({ node, level = 0, onNodeAction }) {
   const [open, setOpen] = useState(false);
-
+  const navigate=useNavigate()
+  const[newPassword,setNewPassword]=useState('')
   const hasChildren = node.employees?.length > 0;
-  const isLead = node.role !== undefined;
+  const isLead = node.role === "lead";
+  const ResetPassword= async (e)=>{
+    e.preventDefault()
+    await axios.put(`http://localhost:5000/lead/resetpassword/${id}`,{},{
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        }
+      }
+      .then((result)=>{
+        console.log(result)
+      })
+      .catch((err)=>{
+        console.log(err.response?.data||err.message)
+      })
+
+    )
+  }
 
   return (
     <div style={{ marginLeft: level * 20 }}>
@@ -48,7 +65,7 @@ export default function NodeTree({ node, level = 0, onNodeAction }) {
             <button
               className="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm"
               onClick={() =>
-                onNodeAction?.("resetPassword", node.email)
+                navigate('/admin-dashboard/reset-password')
               }
             >
               Reset Password

@@ -4,7 +4,7 @@ export class Employee{
     }
    
 
-  addEmployee(empName, email, dob, deptName, reptTo, callback) {
+  addEmployee(empName, email, dob, deptName, reptTo,reptToId, callback) {
     // Step 1: Check if department exists
     const deptSql = "SELECT * FROM departments WHERE dept_name = ?";
     this.db.query(deptSql, [deptName], (err, deptResult) => {
@@ -16,10 +16,10 @@ export class Employee{
 
       // Step 2: Insert employee
       const sql = `
-        INSERT INTO employees (name, email, DOB, Dept, Dept_Lead)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO employees (name, email, DOB, Dept, Dept_Lead,lead_id)
+        VALUES (?, ?, ?, ?, ?,?)
       `;
-      this.db.query(sql, [empName, email, dob, deptName, reptTo], (err2, result) => {
+      this.db.query(sql, [empName, email, dob, deptName, reptTo,reptToId], (err2, result) => {
         if (err2) return callback(err2);
         callback(null, result);
       });

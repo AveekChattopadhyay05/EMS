@@ -37,6 +37,11 @@ export default function AdminSidebar(){
   <FaCalendar />
   <span>Leave</span>
 </NavLink>
+<NavLink to="/admin-dashboard/manage-leaves"
+  className="flex items-center space-x-4 block py-2.5 px-4 rounded">
+  <FaCalendar />
+  <span>Approve Leave</span>
+</NavLink>
 
 <NavLink to="/admin-dashboard/salaries"
   className="flex items-center space-x-4 block py-2.5 px-4 rounded">

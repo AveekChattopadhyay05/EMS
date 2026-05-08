@@ -19,7 +19,15 @@ import LeadsList from './components/leads/LeadsList';
 import AddLead from './components/leads/AddLead';
 import EditLead from './components/leads/EditLead';
 import DebugTree from './components/leads/DebugTree';
-
+import SetupAccount from './pages/SetupAccount';
+import LeadDashbooard from './pages/LeadDashboard';
+import EmpLeave from './pages/EmpLeave';
+import LeadLeave from './pages/LeadLeave'
+import LeadApprove from './pages/LeadApprove';
+import EditLeadPassword from './components/leads/EditLeadPassword';
+import ForgotPassword from './pages/ForgotPassword';
+import AdminApprove from './pages/AdminApprove';
+import ChatWidget from './AI-Service/ChatWidget';
 const router = createBrowserRouter([
   {
     path: '/',
@@ -28,6 +36,13 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />
+  },
+  {
+    path:'/setup-account',
+    element:<SetupAccount/>
+  },
+  {path:'/forgot-password',
+    element:<ForgotPassword/>
   },
   {
   path: '/admin-dashboard',
@@ -80,26 +95,66 @@ const router = createBrowserRouter([
     {
       path:'edit-lead/:email',
       element:<EditLead/>
-    }
+    },
+    {
+      path:'reset-password',
+      element:<EditLeadPassword/>
+
+    },
+    {
+    path:'leaves',
+    element:<Leave/>
+  },
+  {
+    path:'manage-leaves',
+    element:<AdminApprove/>
+  }
   ]
 }
 ,
-  {
-    path:'/leaves',
-    element:<Leave/>
-  },
+  
   {
     path: '/employee-dashboard',
     element: (
       <ProtectedRoute role="employee">
         <EmployeeDashboard />
       </ProtectedRoute>
-    )
+    ),
+    children:[
+      {
+        path:'leaves',
+        element:<EmpLeave/>
+      }
+    ]
   },
-]);
+  {
+    path: '/lead-dashboard',
+    element: (
+      <ProtectedRoute role="lead">
+        <LeadDashbooard />
+      </ProtectedRoute>
+    ),
+    children:[
+      {
+        path:'leaves',
+        element:<LeadLeave/>
+      },
+      {
+        path:'approve',
+        element:<LeadApprove/>
+      }
+    ]
+  },
+],
+);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return(
+    <>
+    <RouterProvider router={router} />
+    
+    </>
+  ) ;
 }
 
 export default App;

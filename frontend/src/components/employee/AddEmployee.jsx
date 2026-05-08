@@ -8,6 +8,7 @@ export default function AddEmployee() {
   const [dob, setDob] = useState('');
   const [deptName, setDeptName] = useState('');
   const [reptTo, setReptTo] = useState('');
+  const [reptToId,setReptToId]=useState()
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -16,7 +17,7 @@ export default function AddEmployee() {
 
     axios.post(
       "http://localhost:5000/api/employee/add",
-      { empName, email, dob, deptName, reptTo },
+      { empName, email, dob, deptName, reptTo,reptToId },
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -102,6 +103,15 @@ export default function AddEmployee() {
               type="text"
               name="lead_name"
               placeholder="Lead Name"
+              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+              required
+            />
+            <label className="text-sm font-medium text-gray-700">Lead ID</label>
+            <input
+              onChange={(e) => setReptToId(e.target.value)}
+              type="number"
+              name="lead_id"
+              placeholder="Lead ID"
               className="mt-1 w-full p-2 border border-gray-300 rounded-md"
               required
             />
