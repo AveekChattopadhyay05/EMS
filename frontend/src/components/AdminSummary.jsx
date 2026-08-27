@@ -8,7 +8,7 @@ import axios from "axios";
 export default function AdminSummary(){
   const [data,setData]=useState('')
     useEffect(()=>{
-        axios.get('http://localhost:5000/admin/summary',{
+        axios.get('http://localhost:5000/api/admin-leaves/summary',{
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         }

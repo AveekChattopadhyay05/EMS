@@ -1,34 +1,56 @@
-export class Department{
-    constructor(db){
-        this.db = db;
+import db from "../config/db.js";
+class Department{
+    static addDepartment(deptName,description){
+        return new Promise((resolve,reject)=>{
+            
+            const addSql=`INSERT INTO departments (dept_name, description) VALUES (?, ?)`
+            db.query(addSql,[deptName,description],(err,result)=>{
+                if(err){
+                    return reject(err)
+                }
+                resolve(result)
+            })
+        })  
     }
-    addDepartment(deptName,description,callback){
-        const sql = "INSERT INTO departments (dept_name, description) VALUES (?, ?)";
-        this.db.query(sql, [deptName, description], (err, result) => {
-            if(err) return callback(err);
-            callback(null, result);
-        });
+    static listDepartment(){
+        return new Promise((resolve,reject)=>{
+            const listSql=`SELECT * FROM departments`
+            db.query(listSql,(err,result)=>{
+                if(err){
+                    return reject(err)
+                }
+                if(result.length===0){
+                    return reject(new Error('No department found'))
+                }
+                resolve(result)
+            })
+        })
     }
-    updateDepartment(oldName, newName, description, callback){
-        const sql = "UPDATE departments SET dept_name = ?, description = ? WHERE dept_name = ?";
-        this.db.query(sql, [newName, description, oldName], (err, result) => {
-            if(err) return callback(err);
-            callback(null, result);
-        });
+    static deleteDepartment(id){
+        return new Promise((resolve,reject)=>{
+             if(!id){
+                    return reject(new Error('Id not found'))
+                }
+            const delSql=`DELETE FROM departments WHERE dept_id = ?`
+            db.query(delSql,[id],(err,result)=>{
+               if(err){
+                    return reject(err)
+                }
+                resolve(result)
+            })
+        })
     }
-    deleteDepartment(id, callback) {
-  const sql = "DELETE FROM departments WHERE dept_id = ?";
-  this.db.query(sql, [id], (err, result) => {
-    if (err) return callback(err);
-    callback(null, result);
-  });
-}
+    static updateDepartment(oldName, newName, description){
+        return new Promise((resolve,reject)=>{
+            const updateSql=`UPDATE departments SET dept_name = ?, description = ? WHERE dept_name = ?`
+            db.query(updateSql,[newName,description,oldName],(err,result)=>{
+                if(err){
+                    return reject(err)
+                }
+                resolve(result)
+            })
+        })
+    }
 
-    listDepartments(callback){
-        const sql = "SELECT * FROM departments";
-        this.db.query(sql, (err, results) => {
-            if(err) return callback(err);
-            callback(null, results);
-        });
-    }
 }
+export default Department

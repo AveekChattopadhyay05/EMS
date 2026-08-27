@@ -1,560 +1,333 @@
+import db from "../config/db.js";
 import bcrypt from "bcrypt";
+class Lead{
+   static addLead(name, email, password, role) {
+    return new Promise((resolve, reject) => {
 
-export class Lead {
-  constructor(db) {
-    this.db = db;
-  }
-
-  // ✅ Add a new lead
-  addLead(name, email, password, role, callback) {
-    if (!name || !email || !password || !role) {
-      return callback(new Error("Some parameter is missing"));
-    }
-
-    const saltRounds = 10;
-
-    const checkSql = "SELECT * FROM employees WHERE name = ?";
-    this.db.query(checkSql, [name], (err, result) => {
-      if (err) return callback(err);
-
-      if (result.length === 0) {
-        return callback(new Error("Employee not found"));
-      }
-
-      const employeeId = result[0].id;
-      const employeeDept = result[0].Dept;
-
-      bcrypt.hash(password, saltRounds, (errHash, hashedPassword) => {
-        if (errHash) return callback(errHash);
-
-        const insertSql = `
-          INSERT INTO users (name,email,password,role,employee_id)
-          VALUES (?,?,?,?,?)
-        `;
-
-        this.db.query(
-          insertSql,
-          [name, email, hashedPassword, role, employeeId],
-          (err2) => {
-            if (err2) return callback(err2);
-
-            // assign employees of same dept to this lead
-            const updateEmployeesSql =
-              "UPDATE employees SET lead_id = ? WHERE Dept = ? AND id != ?";
-
-            this.db.query(
-              updateEmployeesSql,
-              [employeeId, employeeDept, employeeId],
-              (err3, result3) => {
-                if (err3) return callback(err3);
-
-                // lead reports to admin (NULL)
-                const updateLeadSql =
-                  "UPDATE employees SET lead_id = NULL WHERE id = ?";
-
-                this.db.query(updateLeadSql, [employeeId], (err4) => {
-                  if (err4) return callback(err4);
-
-                  callback(null, {
-                    success: "Lead added successfully",
-                    leadAdded: name,
-                    employeesUpdated: result3.affectedRows,
-                  });
-                });
-              }
-            );
-          }
-        );
-      });
-    });
-  }
-
-  // ✅ Recursive employee hierarchy
-  getEmployeesRecursively(leadId, done) {
-    const sql =
-      "SELECT id,name,email,Dept,DOB FROM employees WHERE lead_id = ?";
-
-    this.db.query(sql, [leadId], (err, employees) => {
-      if (err) return done([]);
-
-      if (employees.length === 0) return done([]);
-
-      let completed = 0;
-      const result = [];
-
-      employees.forEach((emp, idx) => {
-        this.getEmployeesRecursively(emp.id, (nestedEmployees) => {
-          result[idx] = {
-            ...emp,
-            DOB: emp.DOB
-              ? new Date(emp.DOB).toISOString().split("T")[0]
-              : null,
-            employees: nestedEmployees,
-            employeeCount: nestedEmployees.length,
-          };
-
-          completed++;
-
-          if (completed === employees.length) done(result);
-        });
-      });
-    });
-  }
-
-  // ✅ List all leads with employee tree
-  listLeads(callback) {
-    const getLeadsSql =
-      'SELECT id,name,email,role,employee_id FROM users WHERE role != "admin"';
-
-    this.db.query(getLeadsSql, (err, leads) => {
-      if (err) return callback(err);
-
-      if (leads.length === 0) return callback(null, []);
-
-      const result = [];
-      let doneCount = 0;
-
-      leads.forEach((lead, idx) => {
-        this.getEmployeesRecursively(lead.employee_id, (employees) => {
-          result[idx] = {
-            ...lead,
-            employees,
-            employeeCount: employees.length,
-          };
-
-          doneCount++;
-
-          if (doneCount === leads.length) callback(null, result);
-        });
-      });
-    });
-  }
-
-  // ✅ Reset password
-  resetPassword(id, newPassword, callback) {
-    if (!newPassword) return callback(new Error("New password required"));
-
-    bcrypt.hash(newPassword, 10, (err, hashed) => {
-      if (err) return callback(err);
-
-      const sql = "UPDATE users SET password = ? WHERE id = ?";
-
-      this.db.query(sql, [hashed, id], (err2, result) => {
-        if (err2) return callback(err2);
-
-        if (result.affectedRows === 0)
-          return callback(new Error("Lead not found"));
-
-        callback(null, { success: "Password reset successfully" });
-      });
-    });
-  }
-
-  // ✅ Delete lead
-  deleteLead(email, callback) {
-    const sql = "DELETE FROM users WHERE email = ?";
-
-    this.db.query(sql, [email], (err) => {
-      if (err) return callback(err);
-
-      callback(null, { success: "Successfully deleted" });
-    });
-  }
-
-  // ✅ Get lead by email
-  getLeadByEmail(email, callback) {
-    const sql = "SELECT * FROM users WHERE email = ?";
-
-    this.db.query(sql, [email], (err, result) => {
-      if (err) return callback(err);
-
-      if (result.length === 0)
-        return callback(new Error("User not found"));
-
-      callback(null, result[0]);
-    });
-  }
-
-  // ✅ Update lead
-  updateLead(email, newName, newEmail, password, callback) {
-    if (!newName || !newEmail) {
-      return callback(new Error("Name and email required"));
-    }
-
-    const getUserSql = "SELECT * FROM users WHERE email = ?";
-
-    this.db.query(getUserSql, [email], (err, result) => {
-      if (err) return callback(err);
-
-      if (result.length === 0)
-        return callback(new Error("User not found"));
-
-      const updateUser = (hashedPassword) => {
-        let sql;
-        let params;
-
-        if (hashedPassword) {
-          sql =
-            "UPDATE users SET name=?,email=?,password=? WHERE email=?";
-          params = [newName, newEmail, hashedPassword, email];
-        } else {
-          sql = "UPDATE users SET name=?,email=? WHERE email=?";
-          params = [newName, newEmail, email];
+        if (!name || !email || !password || !role) {
+            return reject(new Error("Some parameter is missing"));
         }
 
-        this.db.query(sql, params, (err2) => {
-          if (err2) return callback(err2);
+        const checkSql = "SELECT * FROM employees WHERE name = ?";
 
-          callback(null, { message: "User updated successfully" });
-        });
-      };
+        db.query(checkSql, [name], (err, result) => {
 
-      if (password && password.trim() !== "") {
-        bcrypt.hash(password, 10, (errHash, hashed) => {
-          if (errHash) return callback(errHash);
-          updateUser(hashed);
+            if (err) {
+                return reject(err);
+            }
+
+            if (result.length === 0) {
+                return reject(new Error("Employee not found"));
+            }
+
+            const employeeId = result[0].id;
+            const employeeDept = result[0].Dept;
+
+            bcrypt.hash(password, 10, (errHash, hashedPassword) => {
+
+                if (errHash) {
+                    return reject(errHash);
+                }
+
+                const insertSql = `
+                    INSERT INTO users
+                    (name, email, password, role, employee_id)
+                    VALUES (?, ?, ?, ?, ?)
+                `;
+
+                db.query(
+                    insertSql,
+                    [name, email, hashedPassword, role, employeeId],
+                    (err2) => {
+
+                        if (err2) {
+                            return reject(err2);
+                        }
+
+                        const updateEmployeesSql = `
+                            UPDATE employees
+                            SET lead_id = ?
+                            WHERE Dept = ? AND id != ?
+                        `;
+
+                        db.query(
+                            updateEmployeesSql,
+                            [employeeId, employeeDept, employeeId],
+                            (err3, result3) => {
+
+                                if (err3) {
+                                    return reject(err3);
+                                }
+
+                                const updateLeadSql = `
+                                    UPDATE employees
+                                    SET lead_id = NULL
+                                    WHERE id = ?
+                                `;
+
+                                db.query(
+                                    updateLeadSql,
+                                    [employeeId],
+                                    (err4) => {
+
+                                        if (err4) {
+                                            return reject(err4);
+                                        }
+
+                                        resolve({
+                                            success: "Lead added successfully",
+                                            leadAdded: name,
+                                            employeesUpdated:
+                                                result3.affectedRows
+                                        });
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+            });
         });
-      } else {
-        updateUser(null);
-      }
     });
-  }
 }
-// import bcrypt from "bcrypt";
+    static getEmployeesRecursively(leadId) {
+    return new Promise((resolve, reject) => {
 
-// export class Lead {
-//   constructor(db) {
-//     this.db = db;
-//   }
+        const sql = `
+            SELECT id, name, email, Dept, DOB
+            FROM employees
+            WHERE lead_id = ?
+        `;
 
-//   // ✅ Add a new lead
-//   addLead(name, email, password, role, callback) {
-//     if (!name || !email || !password || !role) {
-//       return callback(new Error("Some parameter is missing"));
-//     }
+        db.query(sql, [leadId], async (err, employees) => {
 
-//     const saltRounds = 10;
+            if (err) {
+                return reject(err);
+            }
 
-//     // Step 1: Check if employee exists
-//     const checkSql = "SELECT * FROM employees WHERE name = ?";
-//     this.db.query(checkSql, [name], (err, result) => {
-//       if (err) return callback(err);
-//       if (result.length === 0) {
-//         return callback(new Error("This lead does not exist in employees"));
-//       }
+            if (employees.length === 0) {
+                return resolve([]);
+            }
 
-//       const employeeId = result[0].id;
-//       const employeeDept = result[0].Dept;
+            try {
 
-//       // Step 2: Hash password and insert into users
-//       bcrypt.hash(password, saltRounds, (errHash, hashedPassword) => {
-//         if (errHash) return callback(errHash);
+                const result = await Promise.all(
+                    employees.map(async (emp) => {
 
-//         const insertSql = `
-//           INSERT INTO users (name, email, password, role, employee_id)
-//           VALUES (?, ?, ?, ?, ?)
-//         `;
-//         this.db.query(insertSql, [name, email, hashedPassword, role, employeeId], (err2) => {
-//           if (err2) return callback(err2);
+                        const nestedEmployees =
+                            await Lead.getEmployeesRecursively(emp.id);
 
-//           // Step 3: Update employees in dept to this new lead
-//           const updateEmployeesSql =
-//             "UPDATE employees SET Dept_Lead = ? WHERE Dept = ? AND name != ?";
-//           this.db.query(updateEmployeesSql, [name, employeeDept, name], (err3, result3) => {
-//             if (err3) return callback(err3);
+                        return {
+                            ...emp,
+                            DOB: emp.DOB
+                                ? new Date(emp.DOB)
+                                    .toISOString()
+                                    .split("T")[0]
+                                : null,
 
-//             // Step 4: Set the new lead’s own Dept_Lead = 'admin'
-//             const updateNewLeadSql =
-//               "UPDATE employees SET Dept_Lead = 'admin' WHERE name = ?";
-//             this.db.query(updateNewLeadSql, [name], (err4, result4) => {
-//               if (err4) return callback(err4);
+                            employees: nestedEmployees,
 
-//               callback(null, {
-//                 success: "Lead added successfully and employees updated",
-//                 leadAdded: name,
-//                 department: employeeDept,
-//                 employeesUpdated: result3.affectedRows,
-//                 newLeadSetToAdmin: result4.affectedRows,
-//               });
-//             });
-//           });
-//         });
-//       });
-//     });
-//   }
+                            employeeCount:
+                                nestedEmployees.length
+                        };
+                    })
+                );
 
-//   // ✅ List all leads
-//   listLeads(callback) {
-//   console.log("🔍 Starting recursive listLeads");
+                resolve(result);
 
-//   const getLeadsSql = 'SELECT name, email, role FROM users WHERE role != "admin"';
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
+}
+    static listLeads() {
+    return new Promise((resolve, reject) => {
 
-//   // Helper function to recursively fetch employees
-//   const getEmployeesRecursively = (leadName, done) => {
-//     const getEmployeesSql = 'SELECT id, name, email, Dept, DOB FROM employees WHERE Dept_Lead = ?';
-//     this.db.query(getEmployeesSql, [leadName], async (err, employees) => {
-//       if (err) {
-//         console.error(`❌ Error fetching employees for lead ${leadName}:`, err);
-//         return done([]);
-//       }
+        const getLeadsSql =
+            'SELECT id, name, email, role, employee_id FROM users WHERE role != "admin"';
 
-//       if (employees.length === 0) {
-//         return done([]);
-//       }
+        db.query(getLeadsSql, async (err, leads) => {
 
-//       let completed = 0;
-//       const result = [];
+            if (err) {
+                return reject(err);
+            }
 
-//       employees.forEach((emp, idx) => {
-//         // Check if this employee is also a lead (exists in users)
-//         const checkLeadSql = 'SELECT name, email, role FROM users WHERE name = ?';
-//         this.db.query(checkLeadSql, [emp.name], (leadErr, leadRows) => {
-//           if (leadErr) {
-//             console.error(`❌ Error checking if ${emp.name} is a lead:`, leadErr);
-//           }
+            if (leads.length === 0) {
+                return resolve([]);
+            }
 
-//           if (leadRows && leadRows.length > 0) {
-//             // Recursive call if the employee is also a lead
-//             getEmployeesRecursively(emp.name, (nestedEmployees) => {
-//               result[idx] = {
-//                 ...emp,
-//                 DOB: emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null,
-//                 employees: nestedEmployees,
-//                 employeeCount: nestedEmployees.length
-//               };
-//               completed++;
-//               if (completed === employees.length) done(result);
-//             });
-//           } else {
-//             // Normal employee (no subordinates)
-//             result[idx] = {
-//               ...emp,
-//               DOB: emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null,
-//               employees: [],
-//               employeeCount: 0
-//             };
-//             completed++;
-//             if (completed === employees.length) done(result);
-//           }
-//         });
-//       });
-//     });
-//   };
+            try {
 
-//   // Main query to get all top-level leads
-//   this.db.query(getLeadsSql, (err, leads) => {
-//     if (err) {
-//       console.error("❌ Error fetching leads:", err);
-//       return callback(err);
-//     }
+                const result = await Promise.all(
+                    leads.map(async (lead) => {
 
-//     console.log("✅ Found", leads.length, "leads");
+                        const employees =
+                            await Lead.getEmployeesRecursively(
+                                lead.employee_id
+                            );
 
-//     if (leads.length === 0) return callback(null, []);
+                        return {
+                            ...lead,
+                            employees,
+                            employeeCount: employees.length
+                        };
+                    })
+                );
 
-//     const leadsWithEmployees = [];
-//     let doneCount = 0;
+                resolve(result);
 
-//     leads.forEach((lead, idx) => {
-//       getEmployeesRecursively(lead.name, (employees) => {
-//         leadsWithEmployees[idx] = {
-//           ...lead,
-//           employees,
-//           employeeCount: employees.length
-//         };
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
+}
+    static resetPassword(email, newPassword) {
+    return new Promise((resolve, reject) => {
 
-//         doneCount++;
-//         if (doneCount === leads.length) {
-//           console.log("🎉 All leads processed");
-//           callback(null, leadsWithEmployees);
-//         }
-//       });
-//     });
-//   });
-// }
+        if (!newPassword) {
+            return reject(new Error("New password required"));
+        }
 
+        bcrypt.hash(newPassword, 10, (err, hashed) => {
 
-//   // ✅ Reset password
-//   resetPassword(id, newPassword, callback) {
-//     if (!newPassword) return callback(new Error("New password is required"));
+            if (err) {
+                return reject(err);
+            }
 
-//     const saltRounds = 10;
-//     bcrypt.hash(newPassword, saltRounds, (err, hashedPassword) => {
-//       if (err) return callback(err);
+            const sql = "UPDATE users SET password = ? WHERE email = ?";
 
-//       const updateSql = "UPDATE users SET password = ? WHERE id = ?";
-//       this.db.query(updateSql, [hashedPassword, id], (err2, result) => {
-//         if (err2) return callback(err2);
-//         if (result.affectedRows === 0) return callback(new Error("Lead not found"));
-//         callback(null, { success: "Password reset successfully" });
-//       });
-//     });
-//   }
+            db.query(sql, [hashed, email], (err2, result) => {
 
-//   // ✅ Delete lead
-//   deleteLead(id, callback) {
-//     if (!id) return callback(new Error("ID not given"));
+                if (err2) {
+                    return reject(err2);
+                }
 
-//     const sql = "DELETE FROM users WHERE email = ?";
-//     this.db.query(sql, [id], (err, result) => {
-//       if (err) return callback(err);
-//       callback(null, { success: "Successfully deleted" });
-//     });
-//   }
+                if (result.affectedRows === 0) {
+                    return reject(new Error("Lead not found"));
+                }
 
-//   // ✅ Get lead by email
-//   getLeadByEmail(email, callback) {
-//     const query = "SELECT * FROM users WHERE email = ?";
-//     this.db.query(query, [email], (err, results) => {
-//       if (err) return callback(err);
-//       if (results.length === 0) return callback(new Error("User not found"));
-//       callback(null, results[0]);
-//     });
-//   }
+                resolve({
+                    success: "Password reset successfully"
+                });
+            });
+        });
+    });
+}
+ static deleteLead(email) {
+    return new Promise((resolve, reject) => {
 
-//   // ✅ Update lead by email + sync Dept_Lead
-//   updateLead(email, newName, newEmail, password, callback) {
-//     if (!newName || !newEmail) {
-//       return callback(new Error("Name and email are required"));
-//     }
+        const sql = "DELETE FROM users WHERE email = ?";
 
-//     const getOldNameSql = "SELECT name FROM users WHERE email = ?";
-//     this.db.query(getOldNameSql, [email], (err, results) => {
-//       if (err) return callback(err);
-//       if (results.length === 0) return callback(new Error("User not found"));
+        db.query(sql, [email], (err, result) => {
 
-//       const oldName = results[0].name.trim();
-//       const trimmedNewName = newName.trim();
+            if (err) {
+                return reject(err);
+            }
 
-//       const runUserUpdate = (sql, params) => {
-//         this.db.query(sql, params, (err2, result) => {
-//           if (err2) return callback(err2);
-//           if (result.affectedRows === 0) return callback(new Error("User not found"));
+            resolve({
+                success: "Successfully deleted"
+            });
+        });
+    });
+}
+ static getLeadByEmail(email) {
+    return new Promise((resolve, reject) => {
 
-//           // ✅ Step 2: Sync employees’ Dept_Lead
-//           const updateEmployeesSql =
-//             "UPDATE employees SET Dept_Lead = ? WHERE Dept_Lead = ? AND name != ?";
-//           this.db.query(
-//             updateEmployeesSql,
-//             [trimmedNewName, oldName, trimmedNewName],
-//             (err3, result3) => {
-//               if (err3) return callback(err3);
+        const sql = "SELECT * FROM users WHERE email = ?";
 
-//               // Update previous lead to report to new lead
-//               const updatePreviousLeadSql =
-//                 "UPDATE employees SET Dept_Lead = ? WHERE name = ? AND Dept_Lead = 'admin'";
-//               this.db.query(
-//                 updatePreviousLeadSql,
-//                 [trimmedNewName, oldName],
-//                 (err4, result4) => {
-//                   if (err4) return callback(err4);
+        db.query(sql, [email], (err, result) => {
 
-//                   // New lead should report to admin
-//                   const updateNewLeadSql =
-//                     "UPDATE employees SET Dept_Lead = 'admin' WHERE name = ?";
-//                   this.db.query(updateNewLeadSql, [trimmedNewName], (err5, result5) => {
-//                     if (err5) return callback(err5);
+            if (err) {
+                return reject(err);
+            }
 
-//                     callback(null, {
-//                       message: "User updated successfully",
-//                       employeesUpdated: result3.affectedRows,
-//                       previousLeadUpdated: result4.affectedRows,
-//                       newLeadSetToAdmin: result5.affectedRows,
-//                       oldName: oldName,
-//                       newName: trimmedNewName,
-//                     });
-//                   });
-//                 }
-//               );
-//             }
-//           );
-//         });
-//       };
+            if (result.length === 0) {
+                return reject(new Error("User not found"));
+            }
 
-//       // Step 1: Update users table (with or without password)
-//       if (password && password.trim() !== "") {
-//         const saltRounds = 10;
-//         bcrypt.hash(password, saltRounds, (errHash, hashedPassword) => {
-//           if (errHash) return callback(errHash);
+            resolve(result[0]);
+        });
+    });
+}
+ static updateLead(email, newName, newEmail, password) {
+    return new Promise((resolve, reject) => {
 
-//           const updateUserSql =
-//             "UPDATE users SET name = ?, email = ?, password = ? WHERE email = ?";
-//           runUserUpdate(updateUserSql, [trimmedNewName, newEmail, hashedPassword, email]);
-//         });
-//       } else {
-//         const updateUserSql =
-//           "UPDATE users SET name = ?, email = ? WHERE email = ?";
-//         runUserUpdate(updateUserSql, [trimmedNewName, newEmail, email]);
-//       }
-//     });
-//   }
-//   listLeadsWithEmployees(callback) {
-//   console.log("🔍 Starting listLeadsWithEmployees");
-  
-//   // First get all leads (exclude admin)
-//   const getLeadsSql = 'SELECT id, name, email, role FROM users WHERE role != "admin"';
-  
-//   this.db.query(getLeadsSql, (err, leads) => {
-//     if (err) {
-//       console.error("❌ Error fetching leads:", err);
-//       return callback(err);
-//     }
+        if (!newName || !newEmail) {
+            return reject(new Error("Name and email required"));
+        }
 
-//     console.log("✅ Fetched leads:", leads);
-//     console.log("📊 Number of leads found:", leads.length);
+        const getUserSql = "SELECT * FROM users WHERE email = ?";
 
-//     if (leads.length === 0) {
-//       console.log("📭 No leads found, returning empty array");
-//       return callback(null, []);
-//     }
+        db.query(getUserSql, [email], (err, result) => {
 
-//     // For each lead, get their employees
-//     const leadsWithEmployees = [];
-//     let completedRequests = 0;
+            if (err) {
+                return reject(err);
+            }
 
-//     console.log("🔄 Starting to fetch employees for each lead...");
+            if (result.length === 0) {
+                return reject(new Error("User not found"));
+            }
 
-//     leads.forEach((lead, index) => {
-//       console.log(`🔍 Fetching employees for lead: ${lead.name} (index: ${index})`);
-      
-//       const getEmployeesSql = 'SELECT id, name, email, Dept, DOB FROM employees WHERE Dept_Lead = ?';
-      
-//       this.db.query(getEmployeesSql, [lead.name], (empErr, employees) => {
-//         if (empErr) {
-//           console.error(`❌ Error fetching employees for lead ${lead.name}:`, empErr);
-//           employees = []; // Continue with empty array if error
-//         } else {
-//           console.log(`✅ Found ${employees.length} employees for lead ${lead.name}:`, employees);
-//         }
+            const updateUser = (hashedPassword) => {
 
-//         // Format employee DOB
-//         const formattedEmployees = employees.map(emp => ({
-//           ...emp,
-//           DOB: emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null
-//         }));
+                let sql;
+                let params;
 
-//         leadsWithEmployees[index] = {
-//           ...lead,
-//           employees: formattedEmployees,
-//           employeeCount: formattedEmployees.length
-//         };
+                if (hashedPassword) {
 
-//         completedRequests++;
-//         console.log(`📈 Completed ${completedRequests}/${leads.length} lead queries`);
+                    sql =
+                        "UPDATE users SET name=?,email=?,password=? WHERE email=?";
 
-//         // When all requests are completed, send response
-//         if (completedRequests === leads.length) {
-//           console.log("🎉 All lead queries completed, preparing final response");
-          
-//           // Sort by lead name for consistent ordering
-//           leadsWithEmployees.sort((a, b) => a.name.localeCompare(b.name));
-          
-//           console.log("📤 Final response data:", leadsWithEmployees);
-//           callback(null, leadsWithEmployees);
-//         }
-//       });
-//     });
-//   });
-// }
-// }
+                    params = [
+                        newName,
+                        newEmail,
+                        hashedPassword,
+                        email
+                    ];
 
+                } else {
+
+                    sql =
+                        "UPDATE users SET name=?,email=? WHERE email=?";
+
+                    params = [
+                        newName,
+                        newEmail,
+                        email
+                    ];
+                }
+
+                db.query(sql, params, (err2) => {
+
+                    if (err2) {
+                        return reject(err2);
+                    }
+
+                    resolve({
+                        message: "User updated successfully"
+                    });
+                });
+            };
+
+            if (password && password.trim() !== "") {
+
+                bcrypt.hash(password, 10, (errHash, hashed) => {
+
+                    if (errHash) {
+                        return reject(errHash);
+                    }
+
+                    updateUser(hashed);
+                });
+
+            } else {
+
+                updateUser(null);
+            }
+        });
+    });
+}
+}
+export default Lead
