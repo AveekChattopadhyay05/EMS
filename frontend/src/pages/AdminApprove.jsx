@@ -86,7 +86,7 @@ const handleView = (reason) => {
     },[])
     useEffect(()=>{
      
-       axios.get('http://localhost:5000/api/lead/approve/history',{
+       axios.get('http://localhost:5000/api/admin-leaves/approve/history',{
             
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,

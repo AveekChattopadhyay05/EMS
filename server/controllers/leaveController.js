@@ -141,6 +141,17 @@ const getAdminApprovalList = async (req, res, next) => {
         next(err);
     }
 }
+const getAdminApprovalHistory = async (req, res, next) => {
+    try {
+
+        const result = await Leaves.getAdminApprovalHistory();
+
+        return res.status(200).json(result);
+
+    } catch (err) {
+        next(err);
+    }
+}
 const getAdminSummary=async(req,res,next)=>{
     try{
         const result=await Leaves.getAdminSummary()
@@ -162,5 +173,6 @@ export {
     rejectLeave,
     getApprovalHistory,
     getAdminApprovalList,
+    getAdminApprovalHistory,
     getAdminSummary
 };

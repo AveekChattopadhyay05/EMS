@@ -62,7 +62,7 @@ export default function LeadLeave(){
 };
     useEffect(() => {
     axios
-      .get("http://localhost:5000/leaves/summary", {
+      .get("http://localhost:5000/api/leaves/summary", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },

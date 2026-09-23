@@ -403,6 +403,48 @@ static getAdminApprovalList() {
         });
     });
 }
+static getAdminApprovalHistory() {
+    return new Promise((resolve, reject) => {
+
+        const histCheck = `
+            SELECT 
+                l.id,
+                l.employee_id,
+                e.name,
+                l.leave_type,
+                l.start_date,
+                l.end_date,
+                l.total_days,
+                l.reason,
+                l.status
+            FROM leaves l
+            JOIN employees e ON l.employee_id = e.id
+            WHERE e.Dept_Lead = ?
+            AND l.status IN ('Approved', 'Rejected')
+            ORDER BY l.id DESC
+        `;
+
+        db.query(histCheck, ['admin'], (err, result) => {
+
+            if (err) {
+                return reject(err);
+            }
+
+            const formatResult = result.map(leave => ({
+                id: leave.id,
+                name: leave.name,
+                type: leave.leave_type,
+                from: leave.start_date.toISOString().split("T")[0],
+                to: leave.end_date.toISOString().split("T")[0],
+                total: leave.total_days,
+                reason: leave.reason,
+                status: leave.status
+            }));
+
+            resolve(formatResult);
+        });
+    });
+}
 static getAdminSummary(){
     return new Promise((resolve,reject)=>{
          const empsql=`SELECT id FROM employees`

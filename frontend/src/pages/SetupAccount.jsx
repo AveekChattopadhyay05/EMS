@@ -27,7 +27,7 @@ export default function SetupAccount() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/setup-account",
+        "http://localhost:5000/api/setup-account",
         { email, password }
       );
 

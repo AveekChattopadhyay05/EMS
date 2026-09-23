@@ -20,6 +20,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use("/api", authRoutes);
+console.log("🔥 AUTH ROUTE REGISTERED");
 app.use("/api/employee", employeeRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/lead", leadRoutes);
@@ -63,3 +64,4 @@ const PORT = process.env.PORT;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+

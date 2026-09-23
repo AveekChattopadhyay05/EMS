@@ -14,7 +14,7 @@ export default function Login() {
     e.preventDefault();
     console.log("Submitting:", { email, password });
 
-    axios.post('http://localhost:5000/login', { email, password })
+    axios.post('http://localhost:5000/api/login', { email, password })
       .then(result => {
         console.log("Success:", result);
         localStorage.setItem("token", result.data.token);

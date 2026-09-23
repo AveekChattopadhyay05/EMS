@@ -64,7 +64,7 @@ export default function EmpLeave(){
 };
     useEffect(() => {
     axios
-      .get("http://localhost:5000/leaves/summary", {
+      .get("http://localhost:5000/api/leaves/summary", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
